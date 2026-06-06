@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sci-reward"
+version = "0.1.0"
+description = "JAX-native scientific reward modeling toolkit for RL fine-tuning of LLMs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+
+dependencies = [
+    "jax>=0.4.25",
+    "jaxlib>=0.4.25",
+    "flax>=0.8.0",
+    "optax>=0.2.2",
+    "rdkit",
+    "numpy>=1.26",
+    "chex>=0.1.86",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-xdist",
+    "black",
+    "isort",
+    "mypy",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sci_reward*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
