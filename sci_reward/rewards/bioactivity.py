@@ -188,10 +188,15 @@ class BioactivityReward(BaseReward):
 
     @classmethod
     def from_pretrained(
-        cls, path: str | Path, hidden_dim: int = 512, n_layers: int = 3
+        cls,
+        path: str | Path,
+        hidden_dim: int = 512,
+        n_layers: int = 3,
+        dropout_rate: float = 0.1,
     ) -> "BioactivityReward":
+        """Load params from disk. Architecture args must match the saved model."""
         import flax.serialization
-        reward = cls(hidden_dim=hidden_dim, n_layers=n_layers).initialize()
+        reward = cls(hidden_dim=hidden_dim, n_layers=n_layers, dropout_rate=dropout_rate).initialize()
         with open(path, "rb") as f:
             reward.params = flax.serialization.from_bytes(reward.params, f.read())
         return reward
