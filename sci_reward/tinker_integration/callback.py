@@ -16,8 +16,10 @@ SciRewardCallback
     Specifically:
         1. Extract SMILES/IUPAC from each completion.
         2. Score all extracted strings via CompositeReward.batch_score().
-        3. If normalize=True: update RunningStats with valid-only scores,
-           then normalize the full raw array.
+        3. If normalize=True: update RunningStats with scores from molecules
+           that were both successfully extracted AND received a non-zero score
+           (i.e. passed any gate). Gate-blocked molecules are excluded so their
+           forced 0.0 scores do not bias the running normalization statistics.
         4. Overwrite entries where extraction failed with invalid_reward.
 
 extract_smiles / extract_iupac
@@ -154,10 +156,12 @@ class SciRewardCallback:
         valid_arr = np.array(valid_mask)
 
         if self.normalize:
-            # Update stats from valid molecules only, then normalize the full array.
-            # invalid_reward is applied after normalization so extraction failures
-            # always receive exactly invalid_reward and are never rescaled.
-            self._stats.update(raw[valid_arr])
+            # Update stats only from molecules that were both successfully extracted
+            # AND received a non-zero score (i.e. passed the reward gate).
+            # Including gate-blocked molecules (raw=0.0) would bias the running mean
+            # toward zero and distort normalization for genuinely low-scoring molecules.
+            valid_and_nonzero = valid_arr & (raw > 0.0)
+            self._stats.update(raw[valid_and_nonzero])
             rewards = np.array(self._stats.normalize(raw), dtype=np.float32)
             rewards[~valid_arr] = self.invalid_reward
             rewards = rewards.tolist()
@@ -219,9 +223,9 @@ def build_chemistry_job(
     kl_coeff: float = 0.05,
     rollout_batch_size: int = 64,
     generation_kwargs: dict | None = None,
-    qed_weight: float = 0.35,
+    qed_weight: float = 0.40,
     sa_weight: float = 0.25,
-    logp_weight: float = 0.20,
+    logp_weight: float = 0.25,
     format_weight: float = 0.10,
     validity_gate: bool = True,
 ) -> TinkerJobSpec:
@@ -231,6 +235,8 @@ def build_chemistry_job(
     The composite reward combines QED, SA score, LogP proximity, and SMILES
     format quality. ValiditySMILES is used as a hard gate so invalid molecules
     receive reward 0.0 regardless of the other components.
+
+    Default weights sum to 1.0 (qed=0.40, sa=0.25, logp=0.25, format=0.10).
     """
     rewards = [
         QEDReward(),
