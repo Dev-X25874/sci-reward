@@ -219,18 +219,21 @@ class RewardTrainer:
                     vl.append(float(loss))
                     va.append(float(acc))
                 val_loss, val_acc = float(np.mean(vl)), float(np.mean(va))
-                history["val_loss"].append(val_loss)
-                history["val_acc"].append(val_acc)
 
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
                     no_improve = 0
+                    self.reward.params = self.state.params  # track best params in-memory
                     if self.checkpoint_dir is not None:
                         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
-                        self.reward.params = self.state.params
                         self.reward.save(self.checkpoint_dir / "best.flax")
                 else:
                     no_improve += 1
+
+            # Always append so all four history lists stay the same length.
+            # nan entries indicate no validation dataset was provided.
+            history["val_loss"].append(val_loss)
+            history["val_acc"].append(val_acc)
 
             if verbose:
                 print(
@@ -246,5 +249,8 @@ class RewardTrainer:
                     print(f"Early stopping at epoch {epoch + 1}.")
                 break
 
-        self.reward.params = self.state.params
+        # If we were tracking val loss, reward.params already holds the best-epoch params.
+        # Only sync from state when not doing validation (no best-checkpoint logic ran).
+        if val_dataset is None:
+            self.reward.params = self.state.params
         return history
