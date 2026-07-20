@@ -43,7 +43,7 @@ sci_reward/
 ## Install
 
 ```bash
-git clone https://github.com/yourname/sci-reward
+git clone https://github.com/Dev-X25874/sci-reward
 cd sci-reward
 pip install -e ".[dev]"
 ```
